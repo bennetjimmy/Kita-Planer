@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kita-Anwesenheit</title>
+<style>
+  :root{
+    --bg:#f4f6f8;
+    --card:#ffffff;
+    --ink:#1f2a37;
+    --muted:#647084;
+    --line:#e3e8ef;
+    --accent:#2f6b5e;        /* ruhiges Tannengrün */
+    --accent-soft:#e7f0ed;
+    --come:#2f6b5e;
+    --go:#b4533f;            /* gedämpftes Terrakotta */
+    --go-soft:#f6e9e6;
+    --warn:#b9892f;
+    --shadow:0 1px 2px rgba(31,42,55,.06), 0 4px 16px rgba(31,42,55,.06);
+    --radius:14px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--bg);color:var(--ink);
+    font-family:'Segoe UI',system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;
+    font-size:17px;line-height:1.5;-webkit-text-size-adjust:100%}
+  .wrap{max-width:780px;margin:0 auto;padding:18px 16px 60px}
+
+  header{padding:14px 2px 22px}
+  header h1{font-size:1.55rem;font-weight:700;letter-spacing:-.01em}
+  header .sub{color:var(--muted);font-size:.98rem;margin-top:3px}
+
+  /* Tabs */
+  nav.tabs{display:flex;gap:6px;background:var(--card);padding:6px;
+    border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:20px}
+  nav.tabs button{flex:1;border:0;background:transparent;color:var(--muted);
+    font-size:1rem;font-weight:600;padding:12px 8px;border-radius:10px;cursor:pointer;
+    transition:background .15s,color .15s}
+  nav.tabs button.active{background:var(--accent);color:#fff}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    box-shadow:var(--shadow);padding:20px;margin-bottom:18px}
+  .card h2{font-size:1.12rem;font-weight:700;margin-bottom:4px}
+  .card .hint{color:var(--muted);font-size:.92rem;margin-bottom:16px}
+
+  /* Datum + große Zahl */
+  .datewrap{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:6px}
+  .datewrap label{font-weight:600;font-size:.95rem;color:var(--muted)}
+  input[type=date],input[type=time],input[type=number]{
+    font:inherit;padding:11px 12px;border:1px solid var(--line);border-radius:10px;
+    background:#fff;color:var(--ink)}
+  input[type=number]{width:90px}
+
+  .counter{display:flex;align-items:center;justify-content:center;gap:8px;
+    margin:8px 0 4px}
+  .counter .big{font-size:4.2rem;font-weight:800;letter-spacing:-.03em;line-height:1}
+  .counter .lbl{text-align:center;color:var(--muted);font-size:1rem;margin-bottom:18px}
+
+  /* Eingabezeile */
+  .entry{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+  .entry .full{grid-column:1 / -1}
+  .field label{display:block;font-size:.85rem;color:var(--muted);
+    font-weight:600;margin-bottom:5px}
+  .field input{width:100%}
+
+  .btnrow{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:4px}
+  button.action{border:0;border-radius:12px;padding:18px 10px;font-size:1.12rem;
+    font-weight:700;cursor:pointer;color:#fff;transition:transform .08s,filter .15s}
+  button.action:active{transform:scale(.98)}
+  button.come{background:var(--come)}
+  button.go{background:var(--go)}
+  button.action:hover{filter:brightness(1.06)}
+
+  /* Verlauf */
+  .log{list-style:none;margin-top:4px}
+  .log li{display:flex;align-items:center;gap:12px;padding:13px 4px;
+    border-top:1px solid var(--line)}
+  .log li:first-child{border-top:0}
+  .badge{min-width:54px;text-align:center;font-weight:700;padding:6px 8px;
+    border-radius:8px;font-size:.95rem}
+  .badge.come{background:var(--accent-soft);color:var(--come)}
+  .badge.go{background:var(--go-soft);color:var(--go)}
+  .log .ltime{font-weight:600;width:62px}
+  .log .lnow{margin-left:auto;color:var(--muted);font-size:.9rem;white-space:nowrap}
+  .log .del{border:0;background:transparent;color:var(--muted);cursor:pointer;
+    font-size:1.25rem;line-height:1;padding:4px 8px;border-radius:8px}
+  .log .del:hover{background:var(--go-soft);color:var(--go)}
+
+  .empty{text-align:center;color:var(--muted);padding:26px 10px;font-size:.96rem}
+
+  /* Kennzahlen */
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    padding:16px 14px;box-shadow:var(--shadow)}
+  .stat .num{font-size:1.9rem;font-weight:800;letter-spacing:-.02em}
+  .stat .cap{color:var(--muted);font-size:.85rem;margin-top:2px;font-weight:600}
+  .stat .num.accent{color:var(--accent)}
+  .stat .num.warn{color:var(--warn)}
+
+  /* Chart */
+  .chartbox{overflow-x:auto}
+  svg{display:block;width:100%;height:auto;font-family:inherit}
+  .axis text{fill:var(--muted);font-size:11px}
+  .axis line{stroke:var(--line)}
+  .legend{display:flex;gap:18px;flex-wrap:wrap;margin-top:10px;font-size:.88rem;color:var(--muted)}
+  .legend span{display:inline-flex;align-items:center;gap:7px}
+  .legend i{width:14px;height:14px;border-radius:4px;display:inline-block}
+
+  /* Settings */
+  .row{display:flex;align-items:center;justify-content:space-between;gap:14px;
+    padding:14px 0;border-top:1px solid var(--line)}
+  .row:first-of-type{border-top:0}
+  .row .desc{flex:1}
+  .row .desc b{display:block;font-size:1rem}
+  .row .desc small{color:var(--muted)}
+
+  button.ghost{border:1px solid var(--line);background:#fff;color:var(--ink);
+    padding:11px 16px;border-radius:10px;font-weight:600;cursor:pointer;font-size:.95rem}
+  button.ghost:hover{background:var(--bg)}
+  button.danger{color:var(--go);border-color:var(--go-soft)}
+  button.danger:hover{background:var(--go-soft)}
+
+  .daypick{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+  .daypick button{border:1px solid var(--line);background:#fff;color:var(--muted);
+    padding:9px 13px;border-radius:9px;font-weight:600;cursor:pointer;font-size:.9rem}
+  .daypick button.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+  table.week{width:100%;border-collapse:collapse;font-size:.95rem}
+  table.week th,table.week td{text-align:left;padding:11px 8px;border-bottom:1px solid var(--line)}
+  table.week th{color:var(--muted);font-weight:600;font-size:.82rem;text-transform:uppercase;letter-spacing:.03em}
+  table.week td.r{text-align:right;font-variant-numeric:tabular-nums}
+  table.week .peak{font-weight:700;color:var(--accent)}
+
+  .hidden{display:none}
+  .small{font-size:.85rem;color:var(--muted)}
+  @media(max-width:520px){
+    .counter .big{font-size:3.4rem}
+    .stats{grid-template-columns:1fr}
+    header h1{font-size:1.35rem}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Kita-Anwesenheit</h1>
+    <div class="sub">Kommen und Gehen erfassen, Bedarf an Erziehern erkennen</div>
+  </header>
+
+  <nav class="tabs">
+    <button data-tab="erfassen" class="active">Erfassen</button>
+    <button data-tab="statistik">Statistik</button>
+    <button data-tab="woche">Woche</button>
+    <button data-tab="einstellungen">Einstellungen</button>
+  </nav>
+
+  <!-- ERFASSEN -->
+  <section id="tab-erfassen">
+    <div class="card">
+      <div class="datewrap">
+        <label for="datum">Tag</label>
+        <input type="date" id="datum">
+      </div>
+      <div class="counter">
+        <div class="big" id="anwesend">0</div>
+      </div>
+      <div class="lbl" id="anwesendLbl">Kinder gerade anwesend</div>
+
+      <div class="entry">
+        <div class="field">
+          <label for="anzahl">Anzahl Kinder</label>
+          <input type="number" id="anzahl" min="1" step="1" value="1" inputmode="numeric">
+        </div>
+        <div class="field">
+          <label for="zeit">Uhrzeit</label>
+          <input type="time" id="zeit">
+        </div>
+      </div>
+      <div class="btnrow">
+        <button class="action come" id="btnCome">+ Gekommen</button>
+        <button class="action go" id="btnGo">– Gegangen</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Verlauf des Tages</h2>
+      <div class="hint">Jede Buchung mit Uhrzeit und Stand danach</div>
+      <ul class="log" id="log"></ul>
+    </div>
+  </section>
+
+  <!-- STATISTIK -->
+  <section id="tab-statistik" class="hidden">
+    <div class="card">
+      <div class="datewrap">
+        <label for="datumStat">Tag</label>
+        <input type="date" id="datumStat">
+      </div>
+      <div class="stats" style="margin-top:8px">
+        <div class="stat"><div class="num accent" id="sPeak">0</div><div class="cap">Höchststand</div></div>
+        <div class="stat"><div class="num" id="sPeakTime">–</div><div class="cap">Spitze um</div></div>
+        <div class="stat"><div class="num warn" id="sStaff">0</div><div class="cap">Erzieher zur Spitze</div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Tagesverlauf</h2>
+      <div class="hint">Anwesende Kinder über den Tag – die Linie zeigt, ab wann wie viele Erzieher nötig sind</div>
+      <div class="chartbox"><svg id="chartDay" viewBox="0 0 720 320" preserveAspectRatio="xMidYMid meet"></svg></div>
+      <div class="legend">
+        <span><i style="background:var(--accent)"></i>Anwesende Kinder</span>
+        <span><i style="background:var(--warn)"></i>Benötigte Erzieher</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Erzieher-Bedarf pro Stunde</h2>
+      <div class="hint">Höchster Stand je Stunde und daraus errechnete Erzieher</div>
+      <div class="chartbox"><svg id="chartStaff" viewBox="0 0 720 280" preserveAspectRatio="xMidYMid meet"></svg></div>
+    </div>
+  </section>
+
+  <!-- WOCHE -->
+  <section id="tab-woche" class="hidden">
+    <div class="card">
+      <h2>Wochenübersicht</h2>
+      <div class="hint">Höchststand und Spitzenzeit je erfasstem Tag</div>
+      <div class="chartbox"><svg id="chartWeek" viewBox="0 0 720 280" preserveAspectRatio="xMidYMid meet"></svg></div>
+    </div>
+    <div class="card">
+      <h2>Alle erfassten Tage</h2>
+      <div id="weekTable"></div>
+    </div>
+  </section>
+
+  <!-- EINSTELLUNGEN -->
+  <section id="tab-einstellungen" class="hidden">
+    <div class="card">
+      <h2>Betreuungsschlüssel</h2>
+      <div class="hint">Wie viele Kinder betreut ein Erzieher? Daraus wird der Personalbedarf berechnet.</div>
+      <div class="row">
+        <div class="desc"><b>Kinder pro Erzieher</b><small>Üblich: U3 ca. 4, Ü3 ca. 10 – je nach Bundesland</small></div>
+        <input type="number" id="ratio" min="1" step="1" value="10">
+      </div>
+      <div class="row">
+        <div class="desc"><b>Öffnungszeit Beginn</b><small>Startstunde der Verlaufsgrafik</small></div>
+        <input type="number" id="openFrom" min="0" max="23" step="1" value="6">
+      </div>
+      <div class="row">
+        <div class="desc"><b>Öffnungszeit Ende</b><small>Endstunde der Verlaufsgrafik</small></div>
+        <input type="number" id="openTo" min="1" max="24" step="1" value="18">
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Daten</h2>
+      <div class="hint">Alles wird nur auf diesem Gerät gespeichert.</div>
+      <div class="row">
+        <div class="desc"><b>Sichern</b><small>Alle Tage als Datei exportieren</small></div>
+        <button class="ghost" id="btnExport">Export</button>
+      </div>
+      <div class="row">
+        <div class="desc"><b>Wiederherstellen</b><small>Zuvor gesicherte Datei laden</small></div>
+        <button class="ghost" id="btnImport">Import</button>
+        <input type="file" id="fileImport" accept="application/json" class="hidden">
+      </div>
+      <div class="row">
+        <div class="desc"><b>Alles löschen</b><small>Setzt die App komplett zurück</small></div>
+        <button class="ghost danger" id="btnReset">Löschen</button>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+"use strict";
+
+/* ---------- Speicher ---------- */
+var KEY="kitaData_v1";
+var DEFAULT={ settings:{ratio:10,openFrom:6,openTo:18}, days:{} };
+function load(){
+  try{var d=JSON.parse(localStorage.getItem(KEY));if(d&&d.settings&&d.days)return d;}catch(e){}
+  return JSON.parse(JSON.stringify(DEFAULT));
+}
+function save(){localStorage.setItem(KEY,JSON.stringify(DB));}
+var DB=load();
+
+/* ---------- Helfer ---------- */
+function todayISO(){var d=new Date();var o=d.getTimezoneOffset();
+  return new Date(d.getTime()-o*60000).toISOString().slice(0,10);}
+function nowHM(){var d=new Date();return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");}
+function minutes(hm){var p=hm.split(":");return (+p[0])*60+(+p[1]);}
+function dayName(iso){var d=new Date(iso+"T00:00");
+  return ["So","Mo","Di","Mi","Do","Fr","Sa"][d.getDay()];}
+function fmtDate(iso){var d=new Date(iso+"T00:00");
+  return d.toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit"});}
+function getDay(iso){if(!DB.days[iso])DB.days[iso]={entries:[]};return DB.days[iso];}
+function sortEntries(arr){arr.sort(function(a,b){return minutes(a.t)-minutes(b.t)||a.id-b.id;});}
+function staffFor(kids){var r=DB.settings.ratio||1;return kids<=0?0:Math.ceil(kids/r);}
+
+/* laufender Stand bis inkl. Index i (chronologisch) */
+function runningAt(entries,i){var s=0;for(var k=0;k<=i;k++)s+=entries[k].d;return s;}
+
+/* ---------- Tabs ---------- */
+var tabs=document.querySelectorAll("nav.tabs button");
+tabs.forEach(function(btn){
+  btn.addEventListener("click",function(){
+    tabs.forEach(function(b){b.classList.remove("active");});
+    btn.classList.add("active");
+    var t=btn.getAttribute("data-tab");
+    ["erfassen","statistik","woche","einstellungen"].forEach(function(name){
+      document.getElementById("tab-"+name).classList.toggle("hidden",name!==t);
+    });
+    if(t==="statistik")renderStat();
+    if(t==="woche")renderWeek();
+  });
+});
+
+/* ---------- Erfassen ---------- */
+var elDate=document.getElementById("datum");
+var elAnz=document.getElementById("anzahl");
+var elZeit=document.getElementById("zeit");
+var elLog=document.getElementById("log");
+var elNow=document.getElementById("anwesend");
+
+function curISO(){return elDate.value||todayISO();}
+
+function book(direction){
+  var n=parseInt(elAnz.value,10);
+  if(isNaN(n)||n<1){elAnz.focus();return;}
+  var t=elZeit.value||nowHM();
+  var day=getDay(curISO());
+  day.entries.push({id:Date.now(),t:t,d:direction*n});
+  sortEntries(day.entries);
+  save();renderLog();
+}
+document.getElementById("btnCome").addEventListener("click",function(){book(1);});
+document.getElementById("btnGo").addEventListener("click",function(){book(-1);});
+
+function delEntry(id){
+  var day=getDay(curISO());
+  day.entries=day.entries.filter(function(e){return e.id!==id;});
+  save();renderLog();
+}
+
+function renderLog(){
+  var day=getDay(curISO());
+  var e=day.entries;
+  var total=e.reduce(function(s,x){return s+x.d;},0);
+  if(total<0)total=0;
+  elNow.textContent=total;
+
+  if(!e.length){
+    elLog.innerHTML='<div class="empty">Noch keine Buchungen für diesen Tag.<br>Trage oben das erste Kommen ein.</div>';
+    return;
+  }
+  var html="";
+  for(var i=0;i<e.length;i++){
+    var x=e[i];
+    var run=runningAt(e,i);if(run<0)run=0;
+    var come=x.d>0;
+    html+='<li>'+
+      '<span class="ltime">'+x.t+'</span>'+
+      '<span class="badge '+(come?"come":"go")+'">'+(come?"+":"–")+Math.abs(x.d)+'</span>'+
+      '<span class="lnow">danach '+run+' Kinder</span>'+
+      '<button class="del" data-id="'+x.id+'" title="Löschen">×</button>'+
+      '</li>';
+  }
+  elLog.innerHTML=html;
+  elLog.querySelectorAll(".del").forEach(function(b){
+    b.addEventListener("click",function(){delEntry(parseInt(b.getAttribute("data-id"),10));});
+  });
+}
+
+elDate.addEventListener("change",renderLog);
+
+/* ---------- Stundenkurve berechnen ---------- */
+/* gibt Array über Öffnungsstunden mit max. Stand je Stunde */
+function hourlyPeaks(iso){
+  var s=DB.settings, from=s.openFrom, to=s.openTo;
+  var day=DB.days[iso];
+  var res=[];
+  if(!day||!day.entries.length){
+    for(var h=from;h<to;h++)res.push({hour:h,kids:0});
+    return res;
+  }
+  var e=day.entries.slice();sortEntries(e);
+  for(var h=from;h<to;h++){
+    var endMin=(h+1)*60-1; // Stand am Ende der Stunde
+    var sum=0,peak=0;
+    for(var k=0;k<e.length;k++){
+      if(minutes(e[k].t)<=endMin){sum+=e[k].d;if(sum>peak)peak=sum;}
+    }
+    // Stand zum Stundenende, nicht negativ
+    var atEnd=0;for(var m=0;m<e.length;m++){if(minutes(e[m].t)<=endMin)atEnd+=e[m].d;}
+    if(atEnd<0)atEnd=0;
+    res.push({hour:h,kids:atEnd});
+  }
+  return res;
+}
+
+function dayPeak(iso){
+  var day=DB.days[iso];
+  if(!day||!day.entries.length)return {kids:0,time:null};
+  var e=day.entries.slice();sortEntries(e);
+  var sum=0,peak=0,peakT=null;
+  for(var k=0;k<e.length;k++){sum+=e[k].d;if(sum>peak){peak=sum;peakT=e[k].t;}}
+  return {kids:peak,time:peakT};
+}
+
+/* ---------- Statistik ---------- */
+var elDateStat=document.getElementById("datumStat");
+elDateStat.addEventListener("change",renderStat);
+
+function renderStat(){
+  var iso=elDateStat.value||todayISO();
+  var pk=dayPeak(iso);
+  document.getElementById("sPeak").textContent=pk.kids;
+  document.getElementById("sPeakTime").textContent=pk.time||"–";
+  document.getElementById("sStaff").textContent=staffFor(pk.kids);
+  drawDayChart(iso);
+  drawStaffChart(iso);
+}
+
+function svgEl(tag,attrs){
+  var el=document.createElementNS("http://www.w3.org/2000/svg",tag);
+  for(var k in attrs)el.setAttribute(k,attrs[k]);return el;
+}
+
+function drawDayChart(iso){
+  var svg=document.getElementById("chartDay");
+  while(svg.firstChild)svg.removeChild(svg.firstChild);
+  var W=720,H=320,padL=42,padR=16,padT=18,padB=40;
+  var data=hourlyPeaks(iso);
+  var maxKids=Math.max(5,...data.map(function(d){return d.kids;}));
+  var plotW=W-padL-padR, plotH=H-padT-padB;
+  var n=data.length;
+  function x(i){return padL+(n<=1?plotW/2:i*plotW/(n-1));}
+  function yK(v){return padT+plotH-(v/maxKids)*plotH;}
+
+  // Gitter + Y-Beschriftung
+  var steps=4;
+  for(var g=0;g<=steps;g++){
+    var val=Math.round(maxKids*g/steps);
+    var yy=yK(val);
+    svg.appendChild(svgEl("line",{x1:padL,y1:yy,x2:W-padR,y2:yy,stroke:"#e3e8ef","stroke-width":1}));
+    var tx=svgEl("text",{x:padL-8,y:yy+4,"text-anchor":"end","font-size":11,fill:"#647084"});
+    tx.textContent=val;svg.appendChild(tx);
+  }
+  // X-Achse Stunden
+  for(var i=0;i<n;i++){
+    if(n>9 && i%2!==0 && i!==n-1)continue;
+    var t=svgEl("text",{x:x(i),y:H-padB+20,"text-anchor":"middle","font-size":11,fill:"#647084"});
+    t.textContent=data[i].hour+":00";svg.appendChild(t);
+  }
+
+  // Kinder-Fläche
+  var dArea="M"+x(0)+","+yK(data[0].kids);
+  for(var a=1;a<n;a++)dArea+=" L"+x(a)+","+yK(data[a].kids);
+  dArea+=" L"+x(n-1)+","+yK(0)+" L"+x(0)+","+yK(0)+" Z";
+  svg.appendChild(svgEl("path",{d:dArea,fill:"#2f6b5e",opacity:.10}));
+
+  // Kinder-Linie
+  var dLine="M"+x(0)+","+yK(data[0].kids);
+  for(var b=1;b<n;b++)dLine+=" L"+x(b)+","+yK(data[b].kids);
+  svg.appendChild(svgEl("path",{d:dLine,fill:"none",stroke:"#2f6b5e","stroke-width":2.5,"stroke-linejoin":"round","stroke-linecap":"round"}));
+
+  // Erzieher-Linie (gestrichelt)
+  var r=DB.settings.ratio||1;
+  var maxStaff=staffFor(maxKids);
+  function yS(v){return padT+plotH-(v/maxKids)*plotH;} // gleiche Skala über Kinder*ratio
+  var sLine="";
+  for(var c=0;c<n;c++){
+    var need=staffFor(data[c].kids);
+    var yy2=yK(need*r); // auf Kinderskala projizieren
+    sLine+=(c===0?"M":" L")+x(c)+","+yy2;
+  }
+  svg.appendChild(svgEl("path",{d:sLine,fill:"none",stroke:"#b9892f","stroke-width":2,"stroke-dasharray":"5 4","stroke-linejoin":"round"}));
+
+  // Punkte Kinder
+  for(var p=0;p<n;p++){
+    svg.appendChild(svgEl("circle",{cx:x(p),cy:yK(data[p].kids),r:3,fill:"#2f6b5e"}));
+  }
+}
+
+function drawStaffChart(iso){
+  var svg=document.getElementById("chartStaff");
+  while(svg.firstChild)svg.removeChild(svg.firstChild);
+  var W=720,H=280,padL=42,padR=16,padT=18,padB=40;
+  var data=hourlyPeaks(iso);
+  var staffData=data.map(function(d){return {hour:d.hour,staff:staffFor(d.kids),kids:d.kids};});
+  var maxStaff=Math.max(3,...staffData.map(function(d){return d.staff;}));
+  var plotW=W-padL-padR, plotH=H-padT-padB;
+  var n=staffData.length;
+  var gap=6, bw=(plotW/n)-gap;
+  function bx(i){return padL+i*(plotW/n)+gap/2;}
+  function by(v){return padT+plotH-(v/maxStaff)*plotH;}
+
+  var steps=maxStaff<=5?maxStaff:5;
+  for(var g=0;g<=steps;g++){
+    var val=Math.round(maxStaff*g/steps);
+    var yy=by(val);
+    svg.appendChild(svgEl("line",{x1:padL,y1:yy,x2:W-padR,y2:yy,stroke:"#e3e8ef","stroke-width":1}));
+    var tx=svgEl("text",{x:padL-8,y:yy+4,"text-anchor":"end","font-size":11,fill:"#647084"});
+    tx.textContent=val;svg.appendChild(tx);
+  }
+  for(var i=0;i<n;i++){
+    var h=plotH*(staffData[i].staff/maxStaff);
+    var yTop=padT+plotH-h;
+    svg.appendChild(svgEl("rect",{x:bx(i),y:yTop,width:Math.max(2,bw),height:h,rx:5,fill:"#b9892f",opacity:staffData[i].staff?0.85:0.18}));
+    if(staffData[i].staff>0){
+      var lab=svgEl("text",{x:bx(i)+bw/2,y:yTop-6,"text-anchor":"middle","font-size":11,fill:"#1f2a37","font-weight":700});
+      lab.textContent=staffData[i].staff;svg.appendChild(lab);
+    }
+    if(n<=14 || i%2===0){
+      var t=svgEl("text",{x:bx(i)+bw/2,y:H-padB+20,"text-anchor":"middle","font-size":11,fill:"#647084"});
+      t.textContent=staffData[i].hour;svg.appendChild(t);
+    }
+  }
+}
+
+/* ---------- Woche / alle Tage ---------- */
+function renderWeek(){
+  var isos=Object.keys(DB.days).filter(function(iso){
+    return DB.days[iso].entries.length>0;
+  }).sort();
+  drawWeekChart(isos);
+  drawWeekTable(isos);
+}
+
+function drawWeekChart(isos){
+  var svg=document.getElementById("chartWeek");
+  while(svg.firstChild)svg.removeChild(svg.firstChild);
+  var W=720,H=280,padL=42,padR=16,padT=18,padB=46;
+  var recent=isos.slice(-10);
+  if(!recent.length){
+    var t=svgEl("text",{x:W/2,y:H/2,"text-anchor":"middle","font-size":14,fill:"#647084"});
+    t.textContent="Noch keine Tage erfasst.";svg.appendChild(t);return;
+  }
+  var peaks=recent.map(function(iso){return {iso:iso,kids:dayPeak(iso).kids};});
+  var maxKids=Math.max(5,...peaks.map(function(d){return d.kids;}));
+  var plotW=W-padL-padR, plotH=H-padT-padB;
+  var n=peaks.length, gap=10, bw=(plotW/n)-gap;
+  function bx(i){return padL+i*(plotW/n)+gap/2;}
+
+  var steps=4;
+  for(var g=0;g<=steps;g++){
+    var val=Math.round(maxKids*g/steps);
+    var yy=padT+plotH-(val/maxKids)*plotH;
+    svg.appendChild(svgEl("line",{x1:padL,y1:yy,x2:W-padR,y2:yy,stroke:"#e3e8ef","stroke-width":1}));
+    var tx=svgEl("text",{x:padL-8,y:yy+4,"text-anchor":"end","font-size":11,fill:"#647084"});
+    tx.textContent=val;svg.appendChild(tx);
+  }
+  for(var i=0;i<n;i++){
+    var h=plotH*(peaks[i].kids/maxKids);
+    var yTop=padT+plotH-h;
+    svg.appendChild(svgEl("rect",{x:bx(i),y:yTop,width:Math.max(3,bw),height:h,rx:6,fill:"#2f6b5e",opacity:.85}));
+    var lab=svgEl("text",{x:bx(i)+bw/2,y:yTop-6,"text-anchor":"middle","font-size":11,fill:"#1f2a37","font-weight":700});
+    lab.textContent=peaks[i].kids;svg.appendChild(lab);
+    var d1=svgEl("text",{x:bx(i)+bw/2,y:H-padB+18,"text-anchor":"middle","font-size":11,fill:"#647084","font-weight":600});
+    d1.textContent=dayName(peaks[i].iso);svg.appendChild(d1);
+    var d2=svgEl("text",{x:bx(i)+bw/2,y:H-padB+32,"text-anchor":"middle","font-size":10,fill:"#9aa4b2"});
+    d2.textContent=fmtDate(peaks[i].iso);svg.appendChild(d2);
+  }
+}
+
+function drawWeekTable(isos){
+  var box=document.getElementById("weekTable");
+  if(!isos.length){box.innerHTML='<div class="empty">Noch keine Tage erfasst.</div>';return;}
+  var rows=isos.slice().reverse().map(function(iso){
+    var pk=dayPeak(iso);
+    return '<tr>'+
+      '<td>'+dayName(iso)+', '+fmtDate(iso)+'</td>'+
+      '<td class="r peak">'+pk.kids+'</td>'+
+      '<td class="r">'+(pk.time||"–")+'</td>'+
+      '<td class="r">'+staffFor(pk.kids)+'</td>'+
+    '</tr>';
+  }).join("");
+  box.innerHTML='<table class="week"><thead><tr>'+
+    '<th>Tag</th><th class="r">Höchststand</th><th class="r">Spitze um</th><th class="r">Erzieher</th>'+
+    '</tr></thead><tbody>'+rows+'</tbody></table>';
+}
+
+/* ---------- Einstellungen ---------- */
+var elRatio=document.getElementById("ratio");
+var elFrom=document.getElementById("openFrom");
+var elTo=document.getElementById("openTo");
+function loadSettings(){
+  elRatio.value=DB.settings.ratio;
+  elFrom.value=DB.settings.openFrom;
+  elTo.value=DB.settings.openTo;
+}
+function bindSetting(el,key,min,max){
+  el.addEventListener("change",function(){
+    var v=parseInt(el.value,10);
+    if(isNaN(v))v=DB.settings[key];
+    if(v<min)v=min;if(max!=null&&v>max)v=max;
+    el.value=v;DB.settings[key]=v;save();
+  });
+}
+bindSetting(elRatio,"ratio",1,null);
+bindSetting(elFrom,"openFrom",0,23);
+bindSetting(elTo,"openTo",1,24);
+
+/* Export / Import / Reset */
+document.getElementById("btnExport").addEventListener("click",function(){
+  var blob=new Blob([JSON.stringify(DB,null,2)],{type:"application/json"});
+  var a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download="kita-anwesenheit-"+todayISO()+".json";
+  a.click();URL.revokeObjectURL(a.href);
+});
+document.getElementById("btnImport").addEventListener("click",function(){
+  document.getElementById("fileImport").click();
+});
+document.getElementById("fileImport").addEventListener("change",function(ev){
+  var f=ev.target.files[0];if(!f)return;
+  var rd=new FileReader();
+  rd.onload=function(){
+    try{
+      var d=JSON.parse(rd.result);
+      if(d&&d.settings&&d.days){DB=d;save();loadSettings();renderLog();
+        alert("Daten geladen.");}
+      else alert("Datei passt nicht zum Format.");
+    }catch(e){alert("Datei konnte nicht gelesen werden.");}
+  };
+  rd.readAsText(f);ev.target.value="";
+});
+document.getElementById("btnReset").addEventListener("click",function(){
+  if(confirm("Wirklich alle Tage und Einstellungen löschen?")){
+    DB=JSON.parse(JSON.stringify(DEFAULT));save();
+    loadSettings();renderLog();alert("Alles zurückgesetzt.");
+  }
+});
+
+/* ---------- Start ---------- */
+elDate.value=todayISO();
+elDateStat.value=todayISO();
+elZeit.value=nowHM();
+loadSettings();
+renderLog();
+</script>
+</body>
+</html>
